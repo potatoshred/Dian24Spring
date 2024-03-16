@@ -86,7 +86,7 @@ def Test(model, test_loader):
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
-    Info(f"Accuracy: {correct/total}")
+    Info(f"Accuracy of the model on the test images : {correct/total}")
 
 
 # 运行训练和测试
