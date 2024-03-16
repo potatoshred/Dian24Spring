@@ -71,7 +71,7 @@ def train(model, loss, optimizer, train_loader, epochs=5):
             l = loss(outputs, labels)
             l.backward()
             optimizer.step()
-        Info(f"Epoch {epoch+1}, Loss: {l.item()}")
+        Info(f"Epoch {epoch+1}/{epochs}, Loss: {l.item()}")
 
 # 测试模型
 def test(model, test_loader):
