@@ -7,13 +7,8 @@
 [1_2_fc_mnist.py](./1_2_fc_mnist.py)
 
 首先从线性神经网络说起，以一元线性回归模型为例：
-$$
-\begin{cases}
-y=ax+b+\epsilon
-\\
-\epsilon \sim N(0,\sigma^2)
-\end{cases}
-$$
+
+$$\begin{cases}y=ax+b+\epsilon \\ \epsilon \sim N(0,\sigma^2)\end{cases}$$
 
 &emsp;&emsp;可以通过线性回归建立从特征到标签的线性模型。但是，特征与标签间往往不是简单的线性关系。因此，我们引入激活函数，如sigmoid，tanh，以及relu等，使多个线性关系叠加，就如同泰勒展开、傅里叶分解一般，能够将复杂的关系用最基本的关系去逼近。
 
