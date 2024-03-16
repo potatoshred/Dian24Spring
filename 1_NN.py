@@ -50,14 +50,10 @@ class FCNN(nn.Module):
 
 
 # 加载本地MNIST数据集
-transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize((0.5,), (0.5,))
-])
 train_dataset = datasets.MNIST(
-    root=current_dir, train=True, download=False, transform=transform)  # 必须放在当前目录的/MINST/raw目录下
+    root=current_dir, train=True, download=False, transform=transforms.ToTensor())  # 必须放在当前目录的/MINST/raw目录下
 test_dataset = datasets.MNIST(
-    root=current_dir, train=False, download=False, transform=transform)
+    root=current_dir, train=False, download=False, transform=transforms.ToTensor())
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
