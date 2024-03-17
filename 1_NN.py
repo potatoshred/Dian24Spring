@@ -89,8 +89,8 @@ def Test(model, test_loader):
 
     # 评测指标：采用加权平均
     diag      = confusion_mat.diagonal()
-    weights   = confusion_mat.sum(axis=0)/confusion_mat.sum()
-    Accuracy  = np.multiply(weights, diag/confusion_mat.sum()).sum()
+    weights   = confusion_mat.sum(axis=1)/confusion_mat.sum()
+    Accuracy  = diag.sum()/confusion_mat.sum()
     Precision = np.multiply(weights, diag/confusion_mat.sum(axis=0)).sum()
     Recall    = np.multiply(weights, diag/confusion_mat.sum(axis=1)).sum()
     F1_score  = 2*Precision*Recall/(Precision+Recall)
