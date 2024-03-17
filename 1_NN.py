@@ -11,8 +11,7 @@ import shutil
 
 import logging
 LOGLEVEL = logging.INFO
-logging.basicConfig(
-    level=LOGLEVEL, format='%(asctime)s[%(levelname)s]: %(message)s')
+logging.basicConfig(level=LOGLEVEL, format='%(asctime)s[%(levelname)s]: %(message)s')
 Info = logging.info
 Warn = logging.warn
 
@@ -25,7 +24,7 @@ _, _, mnist_files = next(os.walk(mnist_dir))
 for file in mnist_files:
     # 检查是否为gz压缩文件，并检查是否已解压
     if file.endswith(".gz") and file[:-3] not in mnist_files:
-        input_file = os.path.join(mnist_dir, file)
+        input_file  = os.path.join(mnist_dir, file)
         output_file = input_file.rsplit('.')[0]
         Info(f"unzipping {input_file}")
         with gzip.open(input_file, 'rb') as fi:
@@ -50,17 +49,15 @@ class FCNN(nn.Module):
 
 
 # 加载本地MNIST数据集
-train_dataset = datasets.MNIST(
-    root=current_dir, train=True, download=False, transform=transforms.ToTensor())  # 必须放在当前目录的/MINST/raw目录下
-test_dataset = datasets.MNIST(
-    root=current_dir, train=False, download=False, transform=transforms.ToTensor())
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
+train_dataset = datasets.MNIST(root=current_dir, train=True, download=False, transform=transforms.ToTensor())  # 必须放在当前目录的/MINST/raw目录下
+test_dataset  = datasets.MNIST(root=current_dir, train=False, download=False, transform=transforms.ToTensor())
+train_loader  = DataLoader(train_dataset, batch_size=64, shuffle=True)
+test_loader   = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 
 net = FCNN()
 loss = nn.CrossEntropyLoss()
-trainer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
+trainer = optim.Adam(net.parameters(), lr=0.001)
 
 
 # 训练
@@ -80,45 +77,31 @@ def Test(model, test_loader):
     model.eval()
     correct = 0
     total = 0
+    confusion_mat = np.zeros((10, 10))
     with torch.no_grad():
         for inputs, labels in test_loader:
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
-    Info(f"Accuracy of the model on the test images : {correct/total}")
+            for row, col in zip(labels, predicted):
+                confusion_mat[row, col] += 1
+
+    # 评测指标：采用加权平均
+    diag      = confusion_mat.diagonal()
+    weights   = confusion_mat.sum(axis=0)/confusion_mat.sum()
+    Accuracy  = np.multiply(weights, diag/confusion_mat.sum()).sum()
+    Precision = np.multiply(weights, diag/confusion_mat.sum(axis=0)).sum()
+    Recall    = np.multiply(weights, diag/confusion_mat.sum(axis=1)).sum()
+    F1_score  = 2*Precision*Recall/(Precision+Recall)
+    Info("---Metrics---")
+    Info(f"{'Accuracy':10s}:{Accuracy}")
+    Info(f"{'Precision':10s}:{Precision}")
+    Info(f"{'Recall':10s}:{Recall}")
+    Info(f"{'F1_score':10s}:{F1_score}")
 
 
 # 运行训练和测试
-Info("Start training")
-Train(net, loss, trainer, train_loader, epochs=5)
+Info("---Start training---")
+Train(net, loss, trainer, train_loader, epochs=3)
 Test(net, test_loader)
-
-
-# 基本评测指标
-test_loader = DataLoader(test_dataset, batch_size=64, shuffle=False)
-inputs, labels = next(iter(test_loader))
-model = net
-model.eval()
-outputs = model(inputs)
-_, predicted = torch.max(outputs.data, 1)
-
-# 计算混淆矩阵
-confusion_mat = np.zeros((10, 10))
-for row, col in zip(labels, predicted):
-    confusion_mat[row, col] += 1
-
-diag = confusion_mat.diagonal()
-
-# 采用加权平均
-weights = confusion_mat.sum(axis=0)/confusion_mat.sum()
-Accuracy = diag.sum()/confusion_mat.sum()
-Precision = np.multiply(weights, diag/confusion_mat.sum(axis=0)).sum()
-Recall = np.multiply(weights, diag/confusion_mat.sum(axis=1)).sum()
-F1_score = 2*Precision*Recall/(Precision+Recall)
-
-Info("---Metrics---")
-Info(f"{'Accuracy':10s}:{Accuracy}")
-Info(f"{'Precision':10s}:{Precision}")
-Info(f"{'Recall':10s}:{Recall}")
-Info(f"{'F1_score':10s}:{F1_score}")
