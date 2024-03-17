@@ -62,19 +62,19 @@ test_loader   = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 
 # Parameter
-input_size      = 28  # 一行像素作为一个时间步
+input_size      = 28*28  # 一行像素作为一个时间步
 hidden_size     = 128 # 隐藏层的大小
 num_classes     = 10
-sequence_length = 28  # 序列长度，即图像高度
+sequence_length = 1  # 序列长度，即图像高度
 
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 net = SimpleRNN(input_size, hidden_size, num_classes).to(device)
 loss = nn.CrossEntropyLoss()
-trainer = optim.Adam(net.parameters(), lr=0.0001)
+trainer = optim.Adam(net.parameters(), lr=0.001)
 
 # 训练模型
-epochs = 16
+epochs = 8
 for epoch in range(epochs):
     for i, (images, labels) in enumerate(train_loader):
         # images = images.permute(0,1,3,2).contiguous()  # 每列像素作为一个时间步
