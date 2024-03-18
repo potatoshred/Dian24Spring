@@ -54,8 +54,8 @@ test_dataset  = datasets.MNIST(root=current_dir, train=False, download=False, tr
 train_loader  = DataLoader(train_dataset, batch_size=64, shuffle=True)
 test_loader   = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
-
-net = FCNN()
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+net = FCNN().to(device)
 loss = nn.CrossEntropyLoss()
 trainer = optim.Adam(net.parameters(), lr=0.001)
 
@@ -64,6 +64,10 @@ trainer = optim.Adam(net.parameters(), lr=0.001)
 def Train(model, loss, optimizer, train_loader, epochs=5):
     for epoch in range(epochs):
         for inputs, labels in train_loader:
+
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
             optimizer.zero_grad()
             outputs = model(inputs)
             l = loss(outputs, labels)
@@ -80,6 +84,8 @@ def Test(model, test_loader):
     confusion_mat = np.zeros((10, 10))
     with torch.no_grad():
         for inputs, labels in test_loader:
+            inputs = inputs.to(device)
+            labels = labels.to(device)
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
@@ -103,5 +109,5 @@ def Test(model, test_loader):
 
 # 运行训练和测试
 Info("---Start training---")
-Train(net, loss, trainer, train_loader, epochs=3)
+Train(net, loss, trainer, train_loader, epochs=8)
 Test(net, test_loader)
