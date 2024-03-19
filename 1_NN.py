@@ -15,9 +15,15 @@ logging.basicConfig(level=LOGLEVEL, format='%(asctime)s[%(levelname)s]: %(messag
 Info = logging.info
 Warn = logging.warn
 
+from tools import Visualizer, MetricsVisualizer
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 mnist_dir = os.path.join(current_dir, "MNIST/raw")
+
+# Parameter
+batch_size = 64
+lr = 1e-3
+epochs = 16
 
 # 解压缩
 _, _, mnist_files = next(os.walk(mnist_dir))
@@ -48,20 +54,26 @@ class FCNN(nn.Module):
         return x
 
 
-# 加载本地MNIST数据集
-train_dataset = datasets.MNIST(root=current_dir, train=True, download=False, transform=transforms.ToTensor())  # 必须放在当前目录的/MINST/raw目录下
-test_dataset  = datasets.MNIST(root=current_dir, train=False, download=False, transform=transforms.ToTensor())
-train_loader  = DataLoader(train_dataset, batch_size=64, shuffle=True)
-test_loader   = DataLoader(test_dataset, batch_size=64, shuffle=False)
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 net = FCNN().to(device)
 loss = nn.CrossEntropyLoss()
-trainer = optim.Adam(net.parameters(), lr=0.001)
+trainer = optim.Adam(net.parameters(), lr=lr)
+# 记录初始状态便于恢复
+initial_state = net.state_dict()
+initial_optimizer_state = trainer.state_dict()
+
 
 
 # 训练
-def Train(model, loss, optimizer, train_loader, epochs=5):
+loss_track = []
+def Train(batch_size, model, loss, optimizer, epochs=5, visualize=True):
+    if visualize:
+        Info("Loss Visualizer is ON")
+    # 加载本地MNIST数据集
+    train_dataset = datasets.MNIST(root=current_dir, train=True, download=False, transform=transforms.ToTensor())  # 必须放在当前目录的/MINST/raw目录下
+    train_loader  = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
     for epoch in range(epochs):
         for inputs, labels in train_loader:
 
@@ -73,14 +85,17 @@ def Train(model, loss, optimizer, train_loader, epochs=5):
             l = loss(outputs, labels)
             l.backward()
             optimizer.step()
+        loss_track.append(l.item())
         Info(f"Epoch {epoch+1}/{epochs}, Loss: {l.item()}")
-
-
+    
+    if visualize:
+        Visualizer(loss_track, lr, epochs)
+    
 # 测试模型
-def Test(model, test_loader):
+def Test(batch_size, model):
+    test_dataset  = datasets.MNIST(root=current_dir, train=False, download=False, transform=transforms.ToTensor())
+    test_loader   = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     model.eval()
-    correct = 0
-    total = 0
     confusion_mat = np.zeros((10, 10))
     with torch.no_grad():
         for inputs, labels in test_loader:
@@ -88,8 +103,6 @@ def Test(model, test_loader):
             labels = labels.to(device)
             outputs = model(inputs)
             _, predicted = torch.max(outputs.data, 1)
-            total += labels.size(0)
-            correct += (predicted == labels).sum().item()
             for row, col in zip(labels, predicted):
                 confusion_mat[row, col] += 1
 
@@ -105,9 +118,40 @@ def Test(model, test_loader):
     Info(f"{'Precision':10s}:{Precision}")
     Info(f"{'Recall':10s}:{Recall}")
     Info(f"{'F1_score':10s}:{F1_score}")
+    return Accuracy, Precision, Recall, F1_score
 
 
 # 运行训练和测试
 Info("---Start training---")
-Train(net, loss, trainer, train_loader, epochs=8)
-Test(net, test_loader)
+# Train(batch_size, net, loss, trainer, epochs=epochs)
+# Test(batch_size, net)
+
+
+
+def Train_for_Vis(batch_size, model, loss, optimizer, epochs=5):
+    # 加载本地MNIST数据集
+    train_dataset = datasets.MNIST(root=current_dir, train=True, download=False, transform=transforms.ToTensor())  # 必须放在当前目录的/MINST/raw目录下
+    train_loader  = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
+    out = []
+    for epoch in range(epochs):
+        for inputs, labels in train_loader:
+
+            inputs = inputs.to(device)
+            labels = labels.to(device)
+
+            optimizer.zero_grad()
+            outputs = model(inputs)
+            l = loss(outputs, labels)
+            l.backward()
+            optimizer.step()
+        loss_track.append(l.item())
+        Info(f"Epoch {epoch+1}/{epochs}, Loss: {l.item()}")
+        out.append(Test(batch_size, model))
+
+    return out
+
+
+# Metrics Visualizer with epochs
+out = Train_for_Vis(batch_size, net, loss, trainer, epochs=epochs)
+MetricsVisualizer(list(zip(*out)), lr, epochs)
